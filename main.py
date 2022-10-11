@@ -1,12 +1,21 @@
+from gevent import monkey
+monkey.patch_all()
+
+
 from flask import Flask, request
 from math import radians, cos, sin, asin, sqrt
+from gevent.pywsgi import WSGIServer
+from flask_compress import Compress
 import networkx as nx
 import polyline
 import random
 import osmnx 
 
 
+
 app = Flask(__name__)
+compress = Compress()
+compress.init_app(app)
 
 #SG bike network file
 sg_bike_graph = nx.read_gpickle("sg_bike.gpickle")
@@ -98,4 +107,5 @@ def route_plot():
         return {"route_geom":route_geom, "distance": dist}
 
 if __name__ == "__main__":
-    app.run()
+    http_server = WSGIServer(('0.0.0.0', 8080), app)
+    http_server.serve_forever()
