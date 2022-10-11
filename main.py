@@ -25,7 +25,7 @@ class Node:
 sg_bike_graph = nx.read_gpickle("sg_bike.gpickle")
 nodes_df, streets_df = osmnx.graph_to_gdfs(sg_bike_graph)
 nodes_df = nodes_df.reset_index()
-print(nodes_df.head())
+
 
 
 nodes_dict = {}
@@ -61,6 +61,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 @app.route('/imfeelinglucky', methods = ['POST'])
 def route_plot():
+  try:
     req_bod = request.json 
     starting_lat = float(req_bod['starting_lat'])
     starting_lng = float(req_bod['starting_lng'])
@@ -68,7 +69,7 @@ def route_plot():
     
 
     starting_pt_df = nodes_df[(abs(nodes_df['y'] - starting_lat) <= 0.000300 ) & (abs(nodes_df['x'] - starting_lng) <= 0.000300 )]
-    print(starting_pt_df)
+    
     if len(starting_pt_df) == 0:
         return "No routes nearby, try another point!", 404
     #Change starting to point to one of the nearest point on the graph
@@ -113,7 +114,7 @@ def route_plot():
         while(backtrack.parent_osmid != None):
             coords = [backtrack.lat,  backtrack.lng]
             arr.append(coords)
-            print(backtrack.parent_osmid)
+            
             counter +=1
             backtrack = nodes_dict[backtrack.parent_osmid]
         
@@ -124,6 +125,9 @@ def route_plot():
         start_pt = requests.post("https://SWE-Backend.chayhuixiang.repl.co/geocode", json={"lat": start[0], "lng": start[1]}).json()['address']
         end_pt = requests.post("https://SWE-Backend.chayhuixiang.repl.co/geocode", json={"lat": end[0], "lng": end[1]}).json()['address']
         return {"route_geom":route_geom, "distance": dist, "start_pt": {"pt_address": start_pt, "lat": start[0], "lng": start[1]}, "end_pt": {"pt_address": end_pt, "lat": end[0], "lng": end[1]}}
+
+  except Exception as e:
+    return e, 500 
   
 
 @app.route('/test', methods=['GET', 'POST'])
