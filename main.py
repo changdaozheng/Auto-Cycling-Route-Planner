@@ -7,6 +7,7 @@ import networkx as nx
 import polyline
 import random
 import osmnx 
+import json
 import os
 
 
@@ -75,7 +76,7 @@ def route_plot():
     target_dist = int(req_bod['target_dist'])
     
 
-    starting_pt_df = nodes_df[(abs(nodes_df['y'] - starting_lat) <= 0.000300 ) & (abs(nodes_df['x'] - starting_lng) <= 0.000300 )]
+    starting_pt_df = nodes_df[(abs(nodes_df['y'] - starting_lat) <= 0.001) & (abs(nodes_df['x'] - starting_lng) <= 0.001 )] #https://stackoverflow.com/questions/15965166/what-are-the-lengths-of-location-coordinates-latitude-and-longitude
     
     if len(starting_pt_df) == 0:
         return "No routes nearby, try another point!", 404
