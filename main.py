@@ -10,48 +10,56 @@ import osmnx
 import json
 import os
 
-app = Flask(__name__)
-CORS(app, support_credentials=True)
-
-
-# helper functions and classes
-class Node:
-
-  def __init__(self, osmid, lat, lng, parent_osmid, distance, is_visited):
-    self.osmid = osmid
-    self.lat = lat
-    self.lng = lng
-    self.parent_osmid = parent_osmid
-    self.d = distance  # current distance from source node
-    self.is_visited = is_visited
-
-
-#SG bike network file
-sg_bike_graph = nx.read_gpickle("sg_bike.gpickle")
-nodes_df, streets_df = osmnx.graph_to_gdfs(sg_bike_graph)
-nodes_df = nodes_df.reset_index()
-
-#OneMap API
 try:
-  onemap_cred = json.loads(os.environ['onemapCreds'])
-except:
-  with open('./onemap-config/onemapCred.json', 'r') as f:
-    onemap_cred = json.load(f)
-auth_token = requests.post(
-  "https://developers.onemap.sg/privateapi/auth/post/getToken",
-  json=onemap_cred).json()['access_token']
+  app = Flask(__name__)
+  CORS(app, support_credentials=True)
+  
+  
+  # helper functions and classes
+  class Node:
+  
+    def __init__(self, osmid, lat, lng, parent_osmid, distance, is_visited):
+      self.osmid = osmid
+      self.lat = lat
+      self.lng = lng
+      self.parent_osmid = parent_osmid
+      self.d = distance  # current distance from source node
+      self.is_visited = is_visited
+  
+  
+  #SG bike network file
+  
+  sg_bike_graph = nx.read_gpickle("sg_bike.gpickle")
+  print("gpickle read")
+  nodes_df, streets_df = osmnx.graph_to_gdfs(sg_bike_graph)
+  print("nodes dataframe generated")
+  nodes_df = nodes_df.reset_index()
+  
+  #OneMap API
+  try:
+    onemap_cred = json.loads(os.environ['onemapCreds'])
+  except:
+    with open('./onemap-config/onemapCred.json', 'r') as f:
+      onemap_cred = json.load(f)
+  auth_token = requests.post(
+    "https://developers.onemap.sg/privateapi/auth/post/getToken",
+    json=onemap_cred).json()['access_token']
+  print("Auth Token Complete")
+  nodes_dict = {}
+  
+  
+  def map_nodes(point):
+    osmid = point['osmid']
+    lat = point['y']
+    lng = point['x']
+    nodes_dict[osmid] = Node(osmid, lat, lng, None, 0, False)
+  
+  
+  nodes_df.apply(map_nodes, axis=1)
+  print("Prep Ready")
+except Exception as e:
+  print(e)
 
-nodes_dict = {}
-
-
-def map_nodes(point):
-  osmid = point['osmid']
-  lat = point['y']
-  lng = point['x']
-  nodes_dict[osmid] = Node(osmid, lat, lng, None, 0, False)
-
-
-nodes_df.apply(map_nodes, axis=1)
 
 
 def get_neighbours(osmid):
@@ -152,14 +160,8 @@ def route_plot():
 
         route_geom = polyline.encode(arr)
 
-        start = arr[0]
         end = arr[-1]
-        start_pt = requests.post(
-          "https://SWE-Backend.chayhuixiang.repl.co/geocode",
-          json={
-            "lat": start[0],
-            "lng": start[1]
-          }).json()['address']
+        
         end_pt = requests.post(
           "https://SWE-Backend.chayhuixiang.repl.co/geocode",
           json={
@@ -170,27 +172,27 @@ def route_plot():
           "route_geom": route_geom,
           "distance": dist,
           "duration": time_taken,
-          "start_pt": {
-            "pt_address": start_pt,
-            "lat": start[0],
-            "lng": start[1]
-          },
+          
           "end_pt": {
             "pt_address": end_pt,
             "lat": end[0],
             "lng": end[1]
           }
         }
-
+      else:
+        raise Exception("Dist flag not triggered.")
   except Exception as e:
     print(e)
     return "Internal Error", 500
 
 
-@app.route('/test', methods=['GET', 'POST', 'HEAD'])
+@app.route('/', methods=['GET', 'POST', 'HEAD'])
 def test():
   return "API Healthy", 200
 
 
 if __name__ == "__main__":
-  serve(app, host="0.0.0.0", port=27462)
+  print("API Ready")
+  serve(app, host="0.0.0.0", port=8080)
+  print("serve complete")
+  
